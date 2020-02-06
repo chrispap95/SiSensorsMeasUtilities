@@ -1,3 +1,9 @@
 # ignore data files
 *.root
 *.txt
+
+# ignore output files
+*.pdf
+*.png
+*.jpg
+*.eps
