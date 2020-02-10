@@ -1,4 +1,4 @@
-void subtractStrayCapacitance(TString signal, TString bkg) {
+void subtractStrayCapacitance(TString signal, TString bkg, bool isMOS) {
     TCanvas* c = new TCanvas("c","c",1);
     TFile* f_s = TFile::Open(signal);
     TFile* f_b = TFile::Open(bkg);
@@ -26,17 +26,28 @@ void subtractStrayCapacitance(TString signal, TString bkg) {
     }
     for (int i = 0; i < n; ++i) {
         Double_t x_s, y_s, x_b, y_b;
+        // Scale graphs
         gr_s->GetPoint(i,x_s,y_s);
         gr_b->GetPoint(i,x_b,y_b);
-        gr_s_corr->SetPoint(i,x_s,y_s-y_b);
-        gr_invCsqrd->SetPoint(i,x_s,pow(y_s-y_b,-2));
+        if (isMOS) {
+            gr_s->SetPoint(i,-x_s,y_s*pow(10,12));
+            gr_b->SetPoint(i,-x_b,y_b*pow(10,12));
+            gr_s_corr->SetPoint(i,-x_s,(y_s-y_b)*pow(10,12));
+        } else {
+            gr_s_corr->SetPoint(i,x_s,y_s-y_b);
+            gr_invCsqrd->SetPoint(i,x_s,pow(y_s-y_b,-2));
+        }
     }
+
+    TString capacitanceUnits = "[F]";
+    if (isMOS) capacitanceUnits = "[pF]";
+
     slash = bkg.First('/');
     bkg.Remove(0,slash+1);
     Int_t dot = bkg.First('.');
     Int_t len = bkg.Length();
     bkg.Remove(dot,len-dot);
-    TString title_b = bkg+";V [V];C [F]";
+    TString title_b = bkg+";V [V];C "+capacitanceUnits;
     gr_b->SetTitle(title_b);
     gr_b->GetXaxis()->SetTitleSize(0.046);
     gr_b->GetYaxis()->SetTitleSize(0.046);
@@ -53,7 +64,7 @@ void subtractStrayCapacitance(TString signal, TString bkg) {
     len = signal.Length();
     signal.Remove(dot,len-dot);
 
-    TString title_s = signal+";V [V];C [F]";
+    TString title_s = signal+";V [V];C "+capacitanceUnits;
     gr_s->SetTitle(title_s);
     gr_s->GetXaxis()->SetTitleSize(0.046);
     gr_s->GetYaxis()->SetTitleSize(0.046);
@@ -64,7 +75,7 @@ void subtractStrayCapacitance(TString signal, TString bkg) {
     gr_s->Draw("ACP");
     c->Print(pdf_s);
 
-    TString title_s_corr = signal+" - setup C subtracted;V [V];C [F]";
+    TString title_s_corr = signal+" - setup C subtracted;V [V];C "+capacitanceUnits;
     gr_s_corr->SetTitle(title_s_corr);
     gr_s_corr->GetXaxis()->SetTitleSize(0.046);
     gr_s_corr->GetYaxis()->SetTitleSize(0.046);
@@ -75,22 +86,26 @@ void subtractStrayCapacitance(TString signal, TString bkg) {
     gr_s_corr->Draw("ACP");
     c->Print(pdf_s_corr);
 
-    TString title_invCsqrd = signal+" - setup C subtracted;V [V];1/C^{2} [F^{-2}]";
-    gr_invCsqrd->SetTitle(title_invCsqrd);
-    gr_invCsqrd->GetXaxis()->SetTitleSize(0.046);
-    gr_invCsqrd->GetYaxis()->SetTitleSize(0.046);
-    gr_invCsqrd->GetYaxis()->SetTitleOffset(1.00);
-    TString pdf_invCsqrd = "Plots/"+outDir+"/"+signal+"_invCsqrd.pdf";
-    gr_invCsqrd->SetMarkerStyle(8);
-    gr_invCsqrd->SetMarkerSize(0.5);
-    gr_invCsqrd->Draw("ACP");
-    c->Print(pdf_invCsqrd);
+    if (!isMOS) {
+        TString title_invCsqrd = signal+" - setup C subtracted;V [V];1/C^{2} [F^{-2}]";
+        gr_invCsqrd->SetTitle(title_invCsqrd);
+        gr_invCsqrd->GetXaxis()->SetTitleSize(0.046);
+        gr_invCsqrd->GetYaxis()->SetTitleSize(0.046);
+        gr_invCsqrd->GetYaxis()->SetTitleOffset(1.00);
+        TString pdf_invCsqrd = "Plots/"+outDir+"/"+signal+"_invCsqrd.pdf";
+        gr_invCsqrd->SetMarkerStyle(8);
+        gr_invCsqrd->SetMarkerSize(0.5);
+        gr_invCsqrd->Draw("ACP");
+        c->Print(pdf_invCsqrd);
+    }
 
     fout->cd();
     gr_s->Write();
     gr_b->Write();
     gr_s_corr->Write();
-    gr_invCsqrd->Write();
+    if (!isMOS) {
+        gr_invCsqrd->Write();
+    }
     fout->Close();
     return;
 }

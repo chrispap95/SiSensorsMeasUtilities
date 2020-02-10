@@ -7,3 +7,6 @@
 *.png
 *.jpg
 *.eps
+
+# ignore system files
+.DS_store
